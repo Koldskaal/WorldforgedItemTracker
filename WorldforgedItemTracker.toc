@@ -1,0 +1,14 @@
+## Interface: 30300
+## Title: Worldforged Item Tracker
+## Notes: Tracks worldforged items and shares them with friends.
+## Author: Koldskaal
+## Version: 0.1
+## DefaultState: enabled
+## SavedVariables: WorldforgedDB
+
+libs\Astrolabe\Load.xml
+
+core.lua
+waypoints.lua
+tracking.lua
+sharing.lua
