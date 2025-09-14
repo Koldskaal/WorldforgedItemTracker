@@ -136,12 +136,12 @@ function WorldforgedItemTracker:InitializeSharing()
 		if message:find("^REQ:") then
 			DebugMsg("Got REQ from " .. sender, "ff8800")
 			local ids = message:match("^REQ:(.+)")
-			WorldforgedItemTracker.syncState = "WAITING"
+			WorldforgedItemTracker.syncState = "IDLE"
 			if ids then
 				for _, id in ipairs(SplitString(ids, ",")) do
 					id = tonumber(id)
 					if id then
-						if not WorldforgedDB.waypoints_db[id] then
+						if WorldforgedDB.waypoints_db[id] then
 							table.insert(WorldforgedItemTracker.itemQueue, id)
 						end
 					end
