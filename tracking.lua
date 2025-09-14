@@ -58,10 +58,10 @@ function WorldforgedItemTracker:InitializeTracking()
 				is_container = false
 			else
 				for i = 1, GetNumLootItems() do
-					if LootSlotHasItem(i) then
-						local link = GetLootSlotLink(i)
-						if link then
-							local itemID = tonumber(link:match("item:(%d+)"))
+					local link = GetLootSlotLink(i)
+					if link then
+						local itemID = tonumber(link:match("item:(%d+)"))
+						if itemID then
 							WorldforgedItemTracker:OnLoot(itemID)
 						end
 					end
