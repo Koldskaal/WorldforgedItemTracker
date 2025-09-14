@@ -207,6 +207,7 @@ function WorldforgedItemTracker:InitializeSharing()
 				return false
 			end
 			for itemid, _ in pairs(WorldforgedDB.waypoints_db) do
+				pinrt("Should send this item " .. tostring(itemid))
 				for sender, _ in pairs(WorldforgedItemTracker.sender_items) do
 					if contains(WorldforgedItemTracker.sender_items[sender], itemid) then
 						print("SKIP")
