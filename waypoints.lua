@@ -41,7 +41,8 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y)
 	end)
 
 	waypoint:SetScript("OnClick", function(self)
-		WorldforgedItemTracker:SendWaypoint(self.itemid, self.continent, self.zone, self.x, self.y, "PARTY")
+		local data = WorldforgedDB.waypoints_db[self.itemid]
+		WorldforgedItemTracker:SendWaypoint(self.itemid, data.continent, data.zone, data.x, data.y, "PARTY")
 	end)
 
 	Astrolabe:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)

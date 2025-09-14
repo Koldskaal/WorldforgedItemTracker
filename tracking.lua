@@ -57,14 +57,15 @@ function WorldforgedItemTracker:InitializeTracking()
 			if UnitExists("target") and UnitIsDead("target") then
 				is_container = false
 			else
-				is_container = true
-			end
-		end
-		if event == "CHAT_MSG_LOOT" then
-			local itemLink = msg:match("|c%x+|Hitem:.-|h%[.-%]|h|r")
-			if itemLink then
-				local itemID = tonumber(itemLink:match("item:(%d+):"))
-				WorldforgedItemTracker:OnLoot(itemID)
+				for i = 1, GetNumLootItems() do
+					if LootSlotHasItem(i) then
+						local link = GetLootSlotLink(i)
+						if link then
+							local itemID = tonumber(link:match("item:(%d+)"))
+							WorldforgedItemTracker:OnLoot(itemID)
+						end
+					end
+				end
 			end
 		end
 	end)

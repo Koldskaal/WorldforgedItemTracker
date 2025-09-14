@@ -28,6 +28,7 @@ end
 -- Waypoint handling
 -- ########################
 function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, channel, target)
+	print(itemid, continent, zone, x, y, target)
 	local msg = string.format("ITEM:%d;%d;%d;%.4f;%.4f", itemid, continent, zone, x, y)
 	SendAddonMessage(PREFIX, msg, channel, target)
 	DebugMsg(
