@@ -6,6 +6,7 @@ WorldforgedItemTracker.summaryQueue = {}
 WorldforgedItemTracker.requestQueue = {}
 WorldforgedItemTracker.itemQueue = {}
 WorldforgedItemTracker.sync_queue = {}
+WorldforgedItemTracker.sender_items = {}
 
 if RegisterAddonMessagePrefix then
 	RegisterAddonMessagePrefix(PREFIX)
@@ -76,7 +77,6 @@ local function SplitString(str, sep)
 	return results
 end
 
-local sender_ids = {}
 local wait_start = 0
 local wait_timeout = 5
 
@@ -123,8 +123,8 @@ function WorldforgedItemTracker:InitializeSharing()
 				for _, id in ipairs(SplitString(ids, ",")) do
 					id = tonumber(id)
 					if id then
-						sender_ids[sender] = sender_ids[sender] or {}
-						table.insert(sender_ids[sender], id)
+						WorldforgedItemTracker.sender_items[sender] = WorldforgedItemTracker.sender_items[sender] or {}
+						table.insert(WorldforgedItemTracker.sender_items[sender], id)
 						if not WorldforgedDB.waypoints_db[id] then
 							table.insert(WorldforgedItemTracker.requestQueue, tostring(id))
 						end
@@ -195,6 +195,26 @@ function WorldforgedItemTracker:InitializeSharing()
 			WorldforgedItemTracker.syncTarget = target
 			table.remove(WorldforgedItemTracker.sync_queue, 1)
 			wait_start = GetTime()
+		end
+
+		if #WorldforgedItemTracker.sender_items > 0 then
+			local function contains(tbl, val)
+				for i = 1, #tbl do
+					if tonumber(tbl[i]) == tonumber(val) then
+						return true
+					end
+				end
+				return false
+			end
+			for itemid, _ in pairs(WorldforgedDB.waypoints_db) do
+				for sender, _ in pairs(WorldforgedItemTracker.sender_items) do
+					if contains(WorldforgedItemTracker.sender_items[sender], itemid) then
+						print("SKIP")
+					else
+						table.insert(WorldforgedItemTracker.sender_items[sender], itemid)
+					end
+				end
+			end
 		end
 	end)
 end
