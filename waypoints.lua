@@ -45,7 +45,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y)
 		WorldforgedItemTracker:SendWaypoint(self.itemid, data.continent, data.zone, data.x, data.y, "PARTY")
 	end)
 
-	Astrolabe:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)
+	WorldforgedItemTracker:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)
 end
 
 function WorldforgedItemTracker:DeleteWaypoint(itemid)
@@ -53,9 +53,12 @@ function WorldforgedItemTracker:DeleteWaypoint(itemid)
 		return
 	end
 	local waypoint = WorldforgedDB.waypoints_db[itemid].waypoint
+	waypoint:UnregisterEvent("WORLD_MAP_UPDATE")
+	waypoint:SetScript("OnEvent", nil)
+	waypoint:Hide()
 
 	WorldforgedDB.waypoints_db[itemid] = nil
-	Astrolabe:RemoveIconFromMinimap(waypoint)
+	Astrolabe:RemoveIconFromWorldMap(waypoint)
 end
 
 function WorldforgedItemTracker:GetWaypoint(itemid)
@@ -76,8 +79,12 @@ function WorldforgedItemTracker:InitializeWaypoints()
 end
 
 function WorldforgedItemTracker:AddItem(itemid)
+	if WorldforgedDB.waypoints_db[itemid] then
+		return
+	end
+
 	SetMapToCurrentZone()
-	local continent, zone, x, y = GetCurrentMapContinent(), GetCurrentMapZone(), GetPlayerMapPosition("player")
+	local continent, zone, x, y = GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition("player")
 
 	self:CreateWaypoint(itemid, continent, zone, x, y)
 	self:SendWaypoint(itemid, continent, zone, x, y, "PARTY") -- Only send to party for now
@@ -86,12 +93,18 @@ end
 function World_OnEvent(self, event, ...)
 	if event == "WORLD_MAP_UPDATE" then
 		local data = WorldforgedItemTracker:GetWaypoint(self.itemid)
-		local x, y = Astrolabe:PlaceIconOnWorldMap(ItemTrackerOverlay, self, data.continent, data.zone, data.x, data.y)
-		if x and y and (0 < x and x <= 1) and (0 < y and y <= 1) then
-			self:Show()
-		else
-			self:Hide()
-		end
+		local x, y = WorldforgedItemTracker:PlaceIconOnWorldMap(
+			ItemTrackerOverlay,
+			self,
+			data.continent,
+			data.zone,
+			data.x,
+			data.y
+		)
+		-- if x and y and (0 < x and x <= 1) and (0 < y and y <= 1) then
+		-- 	self:Show()
+		-- else
+		-- 	self:Hide()
+		-- end
 	end
 end
-

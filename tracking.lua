@@ -54,20 +54,30 @@ function WorldforgedItemTracker:InitializeTracking()
 	f:SetScript("OnEvent", function(self, event, msg, ...)
 		if event == "LOOT_OPENED" then
 			-- This is not perfect. If a corpse is targeted while opening a container, it will be considered a corpse.
-			if UnitExists("target") and UnitIsDead("target") then
-				is_container = false
-			else
-				for i = 1, GetNumLootItems() do
-					local link = GetLootSlotLink(i)
-					if link then
-						local itemID = tonumber(link:match("item:(%d+)"))
-						if itemID then
-							WorldforgedItemTracker:OnLoot(itemID)
-						end
+			for i = 1, GetNumLootItems() do
+				local link = GetLootSlotLink(i)
+				if link then
+					local itemID = tonumber(link:match("item:(%d+)"))
+					if itemID then
+						WorldforgedItemTracker:OnLoot(itemID)
 					end
 				end
 			end
 		end
+
+		if event == "CHAT_MSG_LOOT" then
+			local itemLink = nil -- fix later
+
+			if itemLink then
+				print("You looted:", itemLink)
+
+				-- Example: Extract item ID
+				local itemID = itemLink:match("item:(%d+)")
+				if itemID then
+					print("Item ID:", itemID)
+				end
+			end
+			print("LOOT", msg, ...)
+		end
 	end)
 end
-

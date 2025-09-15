@@ -9,6 +9,7 @@
 libs\Astrolabe\Load.xml
 
 core.lua
+world_map_bounds.lua
 waypoints.lua
 tracking.lua
 sharing.lua

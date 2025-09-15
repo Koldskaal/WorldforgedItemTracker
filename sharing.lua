@@ -1,4 +1,5 @@
 local PREFIX = "WFI"
+local LOG_LEVEL = LOG_LEVEL or 1 -- INFO
 
 WorldforgedItemTracker.syncState = "IDLE" -- or "WAITING","SENDING"
 WorldforgedItemTracker.syncTarget = nil
@@ -15,9 +16,15 @@ end
 -- ########################
 -- Debug utility
 -- ########################
-local function DebugMsg(msg, color, chat)
+local function DebugMsg(msg, color, chat, level)
 	color = color or "00ff00" -- default green
 	local text = "|cff" .. color .. "[WFI]|r " .. msg
+	if not level then
+		level = 2
+	end
+	if level > LOG_LEVEL then
+		return
+	end
 	print(text)
 
 	if chat then
@@ -377,4 +384,3 @@ function WorldforgedItemTracker:OnLeaderChanged()
 		DebugMsg("Leader changed, I am leader, queuing " .. #self.sync_queue .. " members for sync", "ffffaa")
 	end
 end
-
