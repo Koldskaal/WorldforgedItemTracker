@@ -31,6 +31,10 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 		GameTooltip:SetFrameStrata("TOOLTIP")
 		local link = "item:" .. self.itemid .. ":0:0:0:0:0:0:0"
 		GameTooltip:SetHyperlink(link)
+		local data = WorldforgedDB.waypoints_db[self.itemid]
+		if data and data.source then
+			GameTooltip:AddLine("Found in: " .. data.source, 1, 0.82, 0, true)
+		end
 		GameTooltip:Show()
 	end)
 	waypoint:SetScript("OnLeave", function(self)
@@ -85,7 +89,7 @@ function WorldforgedItemTracker:AddItem(itemid, source)
 	local continent, zone, x, y = GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition("player")
 
 	self:CreateWaypoint(itemid, continent, zone, x, y, source)
-	self:SendWaypoint(itemid, continent, zone, x, y, "PARTY") -- Only send to party for now
+	self:SendWaypoint(itemid, continent, zone, x, y, source, "PARTY") -- Only send to party for now
 end
 
 function World_OnEvent(self, event, ...)
