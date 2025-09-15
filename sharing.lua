@@ -1,6 +1,9 @@
 local PREFIX = "WFI"
 local LOG_LEVEL = LOG_LEVEL or 1 -- INFO
 
+local wait_start = 0
+local wait_timeout = 2
+
 WorldforgedItemTracker.syncState = "IDLE" -- or "WAITING","SENDING"
 WorldforgedItemTracker.syncTarget = nil
 WorldforgedItemTracker.summaryQueue = {}
@@ -35,9 +38,8 @@ end
 -- ########################
 -- Waypoint handling
 -- ########################
-function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, channel, target)
-	print(itemid, continent, zone, x, y, target)
-	local msg = string.format("ITEM:%d;%d;%d;%.4f;%.4f", itemid, continent, zone, x, y)
+function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, source, channel, target)
+	local msg = string.format("ITEM:%d;%d;%d;%.4f;%.4f;%s", itemid, continent, zone, x, y, source)
 	SendAddonMessage(PREFIX, msg, channel, target)
 	DebugMsg(
 		"Sending ITEM "
@@ -56,7 +58,7 @@ function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, chan
 	)
 end
 
-function WorldforgedItemTracker:OnWaypointReceived(sender, itemid, continent, zone, x, y)
+function WorldforgedItemTracker:OnWaypointReceived(sender, itemid, continent, zone, x, y, source)
 	DebugMsg(
 		"Received waypoint "
 			.. itemid
@@ -68,7 +70,7 @@ function WorldforgedItemTracker:OnWaypointReceived(sender, itemid, continent, zo
 
 	if not WorldforgedDB.waypoints_db[itemid] then
 		if self.CreateWaypoint then
-			self:CreateWaypoint(itemid, continent, zone, x, y)
+			self:CreateWaypoint(itemid, continent, zone, x, y, source)
 		end
 	end
 end
@@ -83,10 +85,6 @@ local function SplitString(str, sep)
 	end
 	return results
 end
-
-local wait_start = 0
-local wait_timeout = 5
-
 -- ########################
 -- Main Init
 -- ########################
@@ -110,7 +108,8 @@ function WorldforgedItemTracker:InitializeSharing()
 
 		if message:find("^ITEM:") then
 			DebugMsg("Got ITEM from " .. sender, "00ff88")
-			local itemid, continent, zone, x, y = message:match("^ITEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+)")
+			local itemid, continent, zone, x, y, source =
+				message:match("^ITEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+);(%w+)")
 			if itemid then
 				WorldforgedItemTracker:OnWaypointReceived(
 					sender,
@@ -118,7 +117,8 @@ function WorldforgedItemTracker:InitializeSharing()
 					tonumber(continent),
 					tonumber(zone),
 					tonumber(x),
-					tonumber(y)
+					tonumber(y),
+					source
 				)
 			end
 		end
@@ -317,7 +317,16 @@ function WorldforgedItemTracker.OnItemSending(frame, elapsed)
 				local data = WorldforgedDB.waypoints_db[itemid]
 				if data then
 					DebugMsg("Sending ITEM " .. itemid .. " to " .. tostring(self.syncTarget), "ff0000")
-					self:SendWaypoint(itemid, data.continent, data.zone, data.x, data.y, "WHISPER", self.syncTarget)
+					self:SendWaypoint(
+						itemid,
+						data.continent,
+						data.zone,
+						data.x,
+						data.y,
+						data.source,
+						"WHISPER",
+						self.syncTarget
+					)
 				end
 			end
 			table.remove(self.itemQueue, 1)
