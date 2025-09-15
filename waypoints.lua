@@ -1,5 +1,3 @@
-local Astrolabe = DongleStub("Astrolabe-0.4")
-
 function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y)
 	if not WorldforgedDB.waypoints_db[itemid] then
 		WorldforgedDB.waypoints_db[itemid] = {
@@ -58,7 +56,6 @@ function WorldforgedItemTracker:DeleteWaypoint(itemid)
 	waypoint:Hide()
 
 	WorldforgedDB.waypoints_db[itemid] = nil
-	Astrolabe:RemoveIconFromWorldMap(waypoint)
 end
 
 function WorldforgedItemTracker:GetWaypoint(itemid)

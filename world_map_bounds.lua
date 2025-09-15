@@ -125,11 +125,11 @@ local function TranslateWorldMapPosition(C, Z, xPos, yPos, nC, nZ)
 
 	local px = (x - left) / (right - left)
 	local py = (y - top) / (bot - top)
-	-- print("This is all for", y, x, nZ, Z, left, top)
 
 	return px, py
 end
 
+-- original from Astrolabe
 function WorldforgedItemTracker:PlaceIconOnWorldMap(worldMapFrame, icon, continent, zone, xPos, yPos)
 	local C, Z = GetCurrentMapContinent(), GetCurrentMapAreaID()
 	if Z == 15 or Z == 16 then -- no showing on big map
@@ -137,7 +137,6 @@ function WorldforgedItemTracker:PlaceIconOnWorldMap(worldMapFrame, icon, contine
 		return
 	end
 	local nX, nY = TranslateWorldMapPosition(continent, zone, xPos, yPos, C, Z)
-	-- anchor and :Show() the icon if it is within the boundry of the current map, :Hide() it otherwise
 	if nX and nY and (0 < nX and nX <= 1) and (0 < nY and nY <= 1) then
 		icon:ClearAllPoints()
 		icon:SetPoint(
