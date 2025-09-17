@@ -1,14 +1,20 @@
 function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, source)
-	if not WorldforgedDB.waypoints_db[itemid] then
-		WorldforgedDB.waypoints_db[itemid] = {
-			continent = continent,
-			zone = zone,
-			x = x,
-			y = y,
-			waypoint = nil,
-			source = source,
-		}
+	if
+		WorldforgedDB.waypoints_db[itemid]
+		and WorldforgedDB.waypoints_db[itemid].waypoint
+		and WorldforgedDB.waypoints_db[itemid].waypoint.Hide
+	then
+		WorldforgedDB.waypoints_db[itemid].waypoint:Hide()
 	end
+
+	WorldforgedDB.waypoints_db[itemid] = {
+		continent = continent,
+		zone = zone,
+		x = x,
+		y = y,
+		waypoint = nil,
+		source = source,
+	}
 	local waypoint = CreateFrame("Button", nil, ItemTrackerOverlay)
 	waypoint:SetHeight(12)
 	waypoint:SetWidth(12)
@@ -80,7 +86,7 @@ function WorldforgedItemTracker:InitializeWaypoints()
 	end
 end
 
-function WorldforgedItemTracker:AddItem(itemid, source)
+function WorldforgedItemTracker:AddItem(itemid, source, high_prio)
 	if WorldforgedDB.waypoints_db[itemid] then
 		return
 	end
@@ -89,7 +95,7 @@ function WorldforgedItemTracker:AddItem(itemid, source)
 	local continent, zone, x, y = GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition("player")
 
 	self:CreateWaypoint(itemid, continent, zone, x, y, source)
-	self:SendWaypoint(itemid, continent, zone, x, y, source, "PARTY") -- Only send to party for now
+	self:SendWaypoint(itemid, continent, zone, x, y, source, "PARTY", nil, high_prio) -- Only send to party for now
 end
 
 function World_OnEvent(self, event, ...)

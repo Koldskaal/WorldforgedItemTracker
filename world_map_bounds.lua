@@ -132,7 +132,7 @@ end
 -- original from Astrolabe
 function WorldforgedItemTracker:PlaceIconOnWorldMap(worldMapFrame, icon, continent, zone, xPos, yPos)
 	local C, Z = GetCurrentMapContinent(), GetCurrentMapAreaID()
-	if Z == 15 or Z == 16 then -- no showing on big map
+	if Z == 14 or Z == 15 then -- no showing on big map
 		icon:Hide()
 		return
 	end

@@ -41,31 +41,30 @@ local function GetItemDescription(itemID)
 	return description -- returns a table of lines
 end
 
-function WorldforgedItemTracker:OnLoot(itemID, source, is_container)
+function WorldforgedItemTracker:OnLoot(itemID, source, is_container, high_prio)
 	local description = GetItemDescription(itemID)
 	if not description then
 		return
 	end
 
 	if description[2] == "Worldforged" then
-		WorldforgedItemTracker:AddItem(itemID, source)
+		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
 	end
 
-	if is_container then -- not working atm
-		local name = description[1]
-		if string.sub(name, 1, 13) == "Mystic Scroll" then
-			WorldforgedItemTracker:AddItem(itemID, source)
-		end
+	local name = description[1]
+	if string.sub(name, 1, 13) == "Mystic Scroll" then
+		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
 	end
 
 	-- backup since some items arent WORLDFORGED for some reason
 	if is_container and IsItemBoP(description) and GetNumLootItems() == 1 then
-		WorldforgedItemTracker:AddItem(itemID, source)
+		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
 	end
 end
 
 function WorldforgedItemTracker:InitializeTracking()
 	local lastTooltipName, isContainerSource
+	local lastKill = {}
 
 	GameTooltip:HookScript("OnTooltipSetUnit", function(self)
 		local name, unit = self:GetUnit()
@@ -87,7 +86,6 @@ function WorldforgedItemTracker:InitializeTracking()
 		end
 	end)
 	local f = CreateFrame("Frame")
-	f:RegisterEvent("CHAT_MSG_LOOT")
 	f:RegisterEvent("LOOT_OPENED")
 
 	f:SetScript("OnEvent", function(self, event, msg, ...)
@@ -98,24 +96,77 @@ function WorldforgedItemTracker:InitializeTracking()
 				if link then
 					local itemID = tonumber(link:match("item:(%d+)"))
 					if itemID then
-						WorldforgedItemTracker:OnLoot(itemID, lastTooltipName, isContainerSource)
+						WorldforgedItemTracker:OnLoot(itemID, lastTooltipName, isContainerSource, true)
 					end
 				end
 			end
 		end
+	end)
 
-		if event == "CHAT_MSG_LOOT" then
-			local itemLink = nil -- fix later
+	local fRoll = CreateFrame("Frame")
+	fRoll:RegisterEvent("START_LOOT_ROLL")
+	fRoll:SetScript("OnEvent", function(_, event, rollID, rollTime)
+		if not lastKill then
+			return
+		end
+		if lastKill.killerGUID ~= UnitGUID("player") then
+			return
+		end
 
-			if itemLink then
-				-- print("You looted:", itemLink)
+		local link = GetLootRollItemLink(rollID)
+		if link then
+			local itemID = tonumber(link:match("item:(%d+)"))
+			local source = lastKill.mobName or "[Unknown]"
+			WorldforgedItemTracker:OnLoot(itemID, source, false)
+		end
+	end)
 
-				-- Example: Extract item ID
-				local itemID = itemLink:match("item:(%d+)")
-				if itemID then
-					-- print("Item ID:", itemID)
+	local combat = CreateFrame("Frame")
+	combat:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+	combat:SetScript(
+		"OnEvent",
+		function(frame, event, _, eventType, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags)
+			if eventType == "PARTY_KILL" then
+				local killerGUID = sourceGUID
+				local killerName = sourceName
+
+				-- pet kills belong to the owner
+				if bit.band(sourceFlags, COMBATLOG_OBJECT_TYPE_PET) > 0 then
+					if bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) > 0 then
+						killerGUID = UnitGUID("player")
+						killerName = UnitName("player")
+					end
 				end
+
+				WorldforgedItemTracker.lastKill = {
+					killerGUID = killerGUID,
+					killerName = killerName,
+					mobGUID = destGUID,
+					mobName = destName,
+					time = GetTime(),
+				}
+
+				-- print("Latest kill:", sourceName, "killed", destName)
 			end
+		end
+	)
+
+	-- Last possible trigger.
+	local fChat = CreateFrame("Frame")
+	fChat:RegisterEvent("CHAT_MSG_LOOT")
+	fChat:SetScript("OnEvent", function(_, _, msg, playerName)
+		if not lastKill then
+			return
+		end
+		if lastKill.killerGUID ~= UnitGUID("player") then
+			return
+		end
+
+		local itemLink = msg:match("|Hitem:.-|h.-|h")
+		if itemLink then
+			local itemID = tonumber(itemLink:match("item:(%d+)"))
+			local source = lastKill.mobName or "[Unknown]"
+			WorldforgedItemTracker:OnLoot(itemID, source, false)
 		end
 	end)
 end
