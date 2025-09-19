@@ -227,7 +227,8 @@ local function GetPartyMembers()
 		end
 	end
 
-	table.insert(members, UnitName("player"))
+	local name = UnitName("player")
+	table.insert(members, name)
 	return members
 end
 

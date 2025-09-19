@@ -3,6 +3,36 @@ if not WFIT_ScanTooltip then
 	WFIT_ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 end
 
+local function GetPositionFromGUID(killderGUID)
+	if not guid then
+		return nil
+	end
+	SetMapToCurrentZone()
+
+	-- Check self
+	if UnitGUID("player") == guid then
+		return GetCurrentMapContinent(), GetCurrentMapZone(), GetPlayerMapPosition("player")
+	end
+
+	-- Check party
+	for i = 1, GetNumPartyMembers() do
+		local unit = "party" .. i
+		if UnitGUID(unit) == guid then
+			return GetCurrentMapContinent(), GetCurrentMapZone(), GetPartyMemberPosition(unit)
+		end
+	end
+
+	-- Check raid
+	for i = 1, GetNumRaidMembers() do
+		local unit = "raid" .. i
+		if UnitGUID(unit) == guid then
+			return GetCurrentMapContinent(), GetCurrentMapZone(), GetRaidTargetIndex(unit)
+		end
+	end
+
+	return nil -- not found in group
+end
+
 local function IsItemBoP(description)
 	if not description then
 		return false
@@ -41,24 +71,24 @@ local function GetItemDescription(itemID)
 	return description -- returns a table of lines
 end
 
-function WorldforgedItemTracker:OnLoot(itemID, source, is_container, high_prio)
+function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is_container, high_prio)
 	local description = GetItemDescription(itemID)
 	if not description then
 		return
 	end
 
 	if description[2] == "Worldforged" then
-		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
+		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
 	local name = description[1]
 	if string.sub(name, 1, 13) == "Mystic Scroll" then
-		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
+		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
 	-- backup since some items arent WORLDFORGED for some reason
 	if is_container and IsItemBoP(description) and GetNumLootItems() == 1 then
-		WorldforgedItemTracker:AddItem(itemID, source, high_prio)
+		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 end
 
@@ -96,7 +126,14 @@ function WorldforgedItemTracker:InitializeTracking()
 				if link then
 					local itemID = tonumber(link:match("item:(%d+)"))
 					if itemID then
-						WorldforgedItemTracker:OnLoot(itemID, lastTooltipName, isContainerSource, true)
+						local c, z, x, y = GetPositionFromGUID(UnitGUID("player"))
+						local source = lastTooltipName
+						-- if isContainerSource then
+						-- 	source = "Container=" .. source
+						-- else
+						-- 	source = "Mob=" .. source
+						-- end
+						WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, isContainerSource, true)
 					end
 				end
 			end
@@ -109,15 +146,13 @@ function WorldforgedItemTracker:InitializeTracking()
 		if not lastKill then
 			return
 		end
-		if lastKill.killerGUID ~= UnitGUID("player") then
-			return
-		end
 
 		local link = GetLootRollItemLink(rollID)
 		if link then
 			local itemID = tonumber(link:match("item:(%d+)"))
+			local c, z, x, y = lastKill.c, lastKill.z, lastKill.x, lastKill.y
 			local source = lastKill.mobName or "[Unknown]"
-			WorldforgedItemTracker:OnLoot(itemID, source, false)
+			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		end
 	end)
 
@@ -137,6 +172,7 @@ function WorldforgedItemTracker:InitializeTracking()
 						killerName = UnitName("player")
 					end
 				end
+				local c, z, x, y = GetPositionFromGUID(killerGUID)
 
 				WorldforgedItemTracker.lastKill = {
 					killerGUID = killerGUID,
@@ -144,6 +180,10 @@ function WorldforgedItemTracker:InitializeTracking()
 					mobGUID = destGUID,
 					mobName = destName,
 					time = GetTime(),
+					c = c,
+					z = z,
+					x = x,
+					y = y,
 				}
 
 				-- print("Latest kill:", sourceName, "killed", destName)
@@ -151,22 +191,42 @@ function WorldforgedItemTracker:InitializeTracking()
 		end
 	)
 
+	local activeQuest = nil
+	local activeNPC = nil
+
+	local fQuest = CreateFrame("Frame")
+	fQuest:RegisterEvent("QUEST_COMPLETE")
+
+	fQuest:SetScript("OnEvent", function(_, event, ...)
+		activeQuest = GetTitleText()
+		activeNPC = UnitName("npc") or "Unknown NPC"
+	end)
+
 	-- Last possible trigger.
 	local fChat = CreateFrame("Frame")
 	fChat:RegisterEvent("CHAT_MSG_LOOT")
 	fChat:SetScript("OnEvent", function(_, _, msg, playerName)
-		if not lastKill then
-			return
-		end
-		if lastKill.killerGUID ~= UnitGUID("player") then
+		local isQuestReward = activeNPC == UnitName("target")
+
+		if not lastKill and not isQuestReward then
 			return
 		end
 
 		local itemLink = msg:match("|Hitem:.-|h.-|h")
-		if itemLink then
-			local itemID = tonumber(itemLink:match("item:(%d+)"))
+		if not itemLink then
+			return
+		end
+
+		local itemID = tonumber(itemLink:match("item:(%d+)"))
+
+		if isQuestReward then
+			local c, z, x, y = GetPositionFromGUID(UnitGUID("player"))
+			local source = activeQuest
+			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
+		else
+			local c, z, x, y = lastKill.c, lastKill.z, lastKill.x, lastKill.y
 			local source = lastKill.mobName or "[Unknown]"
-			WorldforgedItemTracker:OnLoot(itemID, source, false)
+			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		end
 	end)
 end

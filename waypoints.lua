@@ -86,13 +86,10 @@ function WorldforgedItemTracker:InitializeWaypoints()
 	end
 end
 
-function WorldforgedItemTracker:AddItem(itemid, source, high_prio)
+function WorldforgedItemTracker:AddItem(itemid, source, continent, zone, x, y, high_prio)
 	if WorldforgedDB.waypoints_db[itemid] then
 		return
 	end
-
-	SetMapToCurrentZone()
-	local continent, zone, x, y = GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition("player")
 
 	self:CreateWaypoint(itemid, continent, zone, x, y, source)
 	self:SendWaypoint(itemid, continent, zone, x, y, source, "PARTY", nil, high_prio) -- Only send to party for now
