@@ -246,7 +246,7 @@ function WorldforgedItemTracker:OnGroupChanged()
 		self:CancelSync("group changed")
 		return
 	end
-	if GetNumPartyMembers() > 1 and IsMyselfLeader() then
+	if GetNumPartyMembers() > 0 and IsMyselfLeader() then
 		self.sync_queue = GetPartyMembers()
 		DebugMsg("Group changed, I am leader, queuing " .. #self.sync_queue .. " members for sync", "ffffaa")
 	end
