@@ -19,12 +19,12 @@ end
 local function DebugMsg(msg, color, chat, level)
 	color = color or "00ff00" -- default green
 	local text = "|cff" .. color .. "[WFI]|r " .. msg
-	if not level then
-		level = 2
-	end
-	if level > LOG_LEVEL then
-		return
-	end
+	-- if not level then
+	-- 	level = 2
+	-- end
+	-- if level > LOG_LEVEL then
+	-- 	return
+	-- end
 	print(text)
 
 	if chat then
@@ -158,8 +158,13 @@ function WorldforgedItemTracker:InitializeSharing()
 		if #WorldforgedItemTracker.sync_queue > 0 then
 			local target = WorldforgedItemTracker.sync_queue[1]
 			DebugMsg("Sending SYNC_REQUEST to " .. target, "ffffff")
-			SendAddonMessage(PREFIX, "SYNC_REQUEST", "WHISPER", target)
-			WorldforgedItemTracker.syncState = "WAITING"
+			if target == UnitName("player") then
+				WorldforgedItemTracker:SendSummary()
+			else
+				SendAddonMessage(PREFIX, "SYNC_REQUEST", "WHISPER", target)
+				WorldforgedItemTracker.syncState = "WAITING"
+			end
+
 			table.remove(WorldforgedItemTracker.sync_queue, 1)
 			wait_start = GetTime()
 		end
@@ -246,6 +251,7 @@ function WorldforgedItemTracker:OnGroupChanged()
 		self:CancelSync("group changed")
 		return
 	end
+	print("GetNumPartyMembers", GetNumPartyMembers(), IsMyselfLeader())
 	if GetNumPartyMembers() > 0 and IsMyselfLeader() then
 		self.sync_queue = GetPartyMembers()
 		DebugMsg("Group changed, I am leader, queuing " .. #self.sync_queue .. " members for sync", "ffffaa")
