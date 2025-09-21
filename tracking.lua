@@ -3,7 +3,7 @@ if not WFIT_ScanTooltip then
 	WFIT_ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 end
 
-local function GetPositionFromGUID(killderGUID)
+local function GetPositionFromGUID(guid)
 	if not guid then
 		return nil
 	end
@@ -127,12 +127,12 @@ function WorldforgedItemTracker:InitializeTracking()
 					local itemID = tonumber(link:match("item:(%d+)"))
 					if itemID then
 						local c, z, x, y = GetPositionFromGUID(UnitGUID("player"))
-						local source = lastTooltipName
-						-- if isContainerSource then
-						-- 	source = "Container=" .. source
-						-- else
-						-- 	source = "Mob=" .. source
-						-- end
+						local source
+						if isContainerSource then
+							source = { type = "CONTAINER", name = lastTooltipName }
+						else
+							source = { type = "CORPSE", name = lastTooltipName }
+						end
 						WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, isContainerSource, true)
 					end
 				end
@@ -151,7 +151,7 @@ function WorldforgedItemTracker:InitializeTracking()
 		if link then
 			local itemID = tonumber(link:match("item:(%d+)"))
 			local c, z, x, y = lastKill.c, lastKill.z, lastKill.x, lastKill.y
-			local source = lastKill.mobName or "[Unknown]"
+			local source = { type = "CORPSE", name = lastKill.mobName or "[Unknown]" }
 			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		end
 	end)
@@ -221,11 +221,11 @@ function WorldforgedItemTracker:InitializeTracking()
 
 		if isQuestReward then
 			local c, z, x, y = GetPositionFromGUID(UnitGUID("player"))
-			local source = activeQuest
+			local source = { type = "QUEST", name = activeQuest }
 			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		else
 			local c, z, x, y = lastKill.c, lastKill.z, lastKill.x, lastKill.y
-			local source = lastKill.mobName or "[Unknown]"
+			local source = { type = "CORPSE", name = lastKill.mobName or "[Unknown]" }
 			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		end
 	end)

@@ -39,7 +39,17 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 		GameTooltip:SetHyperlink(link)
 		local data = WorldforgedDB.waypoints_db[self.itemid]
 		if data and data.source then
-			GameTooltip:AddLine("Found in: " .. data.source, 1, 0.82, 0, true)
+			local sourceText
+			if data.source.type == "QUEST" then
+				sourceText = "Quest: " .. data.source.name
+			elseif data.source.type == "CORPSE" then
+				sourceText = "Corpse: " .. data.source.name
+			elseif data.source.type == "CONTAINER" then
+				sourceText = "Container: " .. data.source.name
+			else
+				sourceText = "Unknown: " .. tostring(data.source)
+			end
+			GameTooltip:AddLine(sourceText, 1, 0.82, 0, true)
 		end
 		GameTooltip:Show()
 	end)
@@ -51,7 +61,15 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 
 	waypoint:SetScript("OnClick", function(self)
 		local data = WorldforgedDB.waypoints_db[self.itemid]
-		WorldforgedItemTracker:SendWaypoint(self.itemid, data.continent, data.zone, data.x, data.y, "PARTY")
+		WorldforgedItemTracker:SendWaypoint(
+			self.itemid,
+			data.continent,
+			data.zone,
+			data.x,
+			data.y,
+			data.source,
+			"PARTY"
+		)
 	end)
 
 	WorldforgedItemTracker:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)
