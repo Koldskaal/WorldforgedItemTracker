@@ -14,9 +14,9 @@ local item_queue = {}
 local seen_items = {}
 local sync_queue = {}
 
-if RegisterAddonMessagePrefix then
-	RegisterAddonMessagePrefix(PREFIX)
-end
+-- Sync progress tracking
+local total_items_to_sync = 0
+local items_synced_count = 0
 
 -- ########################
 -- Debug utility
@@ -37,6 +37,44 @@ local function DebugMsg(msg, color, chat, level)
 end
 
 -- ########################
+-- World Map Progress Display
+-- ########################
+function WorldforgedItemTracker:EnsureMapProgressText()
+	if self.mapSyncText then
+		return
+	end
+
+	local f = CreateFrame("Frame", nil, WorldMapButton)
+	f:SetSize(200, 20)
+	f:SetPoint("TOPLEFT", WorldMapButton, "TOPLEFT", 30, -30)
+	f:SetFrameStrata("TOOLTIP") -- above everything in map
+
+	local syncText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+	syncText:SetAllPoints(f)
+	syncText:SetJustifyH("LEFT")
+	syncText:SetTextColor(1, 0, 0, 1) -- bright red
+	syncText:SetText("SYNC TEST")
+	syncText:Show()
+
+	self.mapSyncText = syncText
+end
+-- Attach on-show hook just once
+WorldMapButton:HookScript("OnShow", function()
+	WorldforgedItemTracker:EnsureMapProgressText()
+	WorldforgedItemTracker:UpdateProgressText()
+end)
+
+function WorldforgedItemTracker:UpdateProgressText()
+	self:EnsureMapProgressText()
+
+	if total_items_to_sync > 0 and sync_state == "WAITING" then
+		self.mapSyncText:SetText(string.format("WFI Sync: %d / %d", items_synced_count, total_items_to_sync))
+	else
+		self.mapSyncText:SetText("")
+	end
+end
+
+-- ########################
 -- Waypoint handling
 -- ########################
 function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, source, channel, target, high_prio)
@@ -44,7 +82,7 @@ function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, sour
 	if high_prio then
 		KEY_STRING = "OTEM"
 	end
-	local sourceString = string.format("%s,%s", source.type, source.name)
+	local sourceString = string.format("%s|%s", source.type, source.name)
 	local msg = string.format("%s:%d;%d;%d;%.4f;%.4f;%s", KEY_STRING, itemid, continent, zone, x, y, sourceString)
 	SendAddonMessage(PREFIX, msg, channel, target)
 	DebugMsg(
@@ -59,7 +97,7 @@ function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, sour
 			.. ","
 			.. y
 			.. ") to "
-			.. tostring(target),
+			.. tostring(channel),
 		"ff5500",
 		nil,
 		LOG_LEVEL_DEBUG
@@ -98,18 +136,48 @@ function WorldforgedItemTracker:InitializeSharing()
 			return
 		end
 
+		if sender == UnitName("player") then
+			return
+		end
+
 		wait_start = GetTime() -- any ping is fine
 
 		if message == "SYNC_REQUEST" then
 			DebugMsg("Got SYNC_REQUEST from " .. sender, "ffff00", nil, LOG_LEVEL_DEBUG)
-			WorldforgedItemTracker:SendSummary(sender)
-		end
-
-		if message:find("^ITEM:") then
+			WorldforgedItemTracker:SendSummary()
+		elseif message:find("^SYNC_START:") then
+			local count = tonumber(message:match("^SYNC_START:(%d+)"))
+			if count then
+				total_items_to_sync = count
+				items_synced_count = 0
+				DebugMsg("Receiving " .. count .. " waypoints from " .. sender, "00ff00", nil, LOG_LEVEL_INFO)
+				if count == 0 then
+					DebugMsg("Sync with " .. sender .. " complete: 0 items.", "00ff00", nil, LOG_LEVEL_INFO)
+				end
+			end
+		elseif message:find("^ITEM:") then
 			DebugMsg("Got ITEM from " .. sender, "00ff88", nil, LOG_LEVEL_DEBUG)
-			local itemid, continent, zone, x, y, source = message:match("^ITEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+);(.+)")
+			local itemid, continent, zone, x, y, source =
+				message:match("^ITEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+);(.+)")
 			if itemid then
-				local sourceType, sourceName = source:match("([^,]+),(.+)")
+				if sync_state == "WAITING" then
+					items_synced_count = items_synced_count + 1
+					self:UpdateProgressText()
+					DebugMsg(
+						"Sync progress: " .. items_synced_count .. "/" .. total_items_to_sync .. " from " .. sender,
+						"00ff00",
+						nil,
+						LOG_LEVEL_DEBUG
+					)
+					if items_synced_count >= total_items_to_sync then
+						DebugMsg("Sync with " .. sender .. " complete.", "00ff00", nil, LOG_LEVEL_INFO)
+						sync_state = "IDLE"
+						total_items_to_sync = 0
+						self:UpdateProgressText()
+					end
+				end
+
+				local sourceType, sourceName = source:match("([^,]+)|(.+)")
 				local sourceObj = { type = sourceType, name = sourceName }
 				WorldforgedItemTracker:OnWaypointReceived(
 					sender,
@@ -121,13 +189,12 @@ function WorldforgedItemTracker:InitializeSharing()
 					sourceObj
 				)
 			end
-		end
-
-		if message:find("^OTEM:") then
+		elseif message:find("^OTEM:") then
 			DebugMsg("Got overwrite ITEM from " .. sender, "00ff88", nil, LOG_LEVEL_DEBUG)
-			local itemid, continent, zone, x, y, source = message:match("^OTEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+);(.+)")
+			local itemid, continent, zone, x, y, source =
+				message:match("^OTEM:(%d+);(%d+);(%d+);([%d%.]+);([%d%.]+);(.+)")
 			if itemid then
-				local sourceType, sourceName = source:match("([^,]+),(.+)")
+				local sourceType, sourceName = source:match("([^,]+)|(.+)")
 				local sourceObj = { type = sourceType, name = sourceName }
 				WorldforgedItemTracker:OnWaypointReceived(
 					sender,
@@ -194,7 +261,11 @@ function WorldforgedItemTracker:SendSummary()
 	end
 	item_queue = ids
 	sync_state = "SENDING"
-	DebugMsg("Sending " .. #item_queue .. " ITEMS", "00ffcc", nil, LOG_LEVEL_INFO)
+
+	local count = #item_queue
+	SendAddonMessage(PREFIX, "SYNC_START:" .. count, "PARTY")
+
+	DebugMsg("Sending " .. count .. " ITEMS to party", "00ffcc", nil, LOG_LEVEL_INFO)
 	self.frame:SetScript("OnUpdate", self.OnItemSending)
 end
 
@@ -253,6 +324,8 @@ function WorldforgedItemTracker:CancelSync(reason)
 	item_queue = {}
 	seen_items = {}
 	sync_queue = {}
+	total_items_to_sync = 0
+	items_synced_count = 0
 	self.frame:SetScript("OnUpdate", nil)
 	DebugMsg("Sync cancelled: " .. (reason or "group changed"), "ff4444", nil, LOG_LEVEL_INFO)
 end
@@ -278,4 +351,3 @@ function WorldforgedItemTracker:OnGroupChanged()
 		)
 	end
 end
-

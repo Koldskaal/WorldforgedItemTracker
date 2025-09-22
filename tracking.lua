@@ -11,14 +11,14 @@ local function GetPositionFromGUID(guid)
 
 	-- Check self
 	if UnitGUID("player") == guid then
-		return GetCurrentMapContinent(), GetCurrentMapZone(), GetPlayerMapPosition("player")
+		return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition("player")
 	end
 
 	-- Check party
 	for i = 1, GetNumPartyMembers() do
 		local unit = "party" .. i
 		if UnitGUID(unit) == guid then
-			return GetCurrentMapContinent(), GetCurrentMapZone(), GetPartyMemberPosition(unit)
+			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPartyMemberPosition(unit)
 		end
 	end
 
@@ -26,7 +26,7 @@ local function GetPositionFromGUID(guid)
 	for i = 1, GetNumRaidMembers() do
 		local unit = "raid" .. i
 		if UnitGUID(unit) == guid then
-			return GetCurrentMapContinent(), GetCurrentMapZone(), GetRaidTargetIndex(unit)
+			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetRaidTargetIndex(unit)
 		end
 	end
 

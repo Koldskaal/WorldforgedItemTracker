@@ -43,7 +43,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 			if data.source.type == "QUEST" then
 				sourceText = "Quest: " .. data.source.name
 			elseif data.source.type == "CORPSE" then
-				sourceText = "Corpse: " .. data.source.name
+				sourceText = "Mob: " .. data.source.name
 			elseif data.source.type == "CONTAINER" then
 				sourceText = "Container: " .. data.source.name
 			else
@@ -73,6 +73,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 	end)
 
 	WorldforgedItemTracker:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)
+	waypoint:Show()
 end
 
 function WorldforgedItemTracker:DeleteWaypoint(itemid)
@@ -100,6 +101,9 @@ function WorldforgedItemTracker:InitializeWaypoints()
 	end
 
 	for itemid, data in pairs(WorldforgedDB.waypoints_db) do
+		if type(data.source) == "string" then
+			data.source = { type = "CONTAINER", name = data.source }
+		end
 		self:CreateWaypoint(itemid, data.continent, data.zone, data.x, data.y, data.source)
 	end
 end
