@@ -218,13 +218,16 @@ function WorldforgedItemTracker:InitializeTracking()
 		end
 
 		local itemID = tonumber(itemLink:match("item:(%d+)"))
+		local player_c, player_z, player_x, player_y = GetPositionFromGUID(UnitGUID("player"))
 
 		if isQuestReward then
-			local c, z, x, y = GetPositionFromGUID(UnitGUID("player"))
 			local source = { type = "QUEST", name = activeQuest }
-			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
+			WorldforgedItemTracker:OnLoot(itemID, source, player_c, player_z, player_x, player_y, false)
 		else
 			local c, z, x, y = lastKill.c, lastKill.z, lastKill.x, lastKill.y
+			if player_c ~= c or player_z ~= z then
+				return -- ignore if player is not in the same zone
+			end
 			local source = { type = "CORPSE", name = lastKill.mobName or "[Unknown]" }
 			WorldforgedItemTracker:OnLoot(itemID, source, c, z, x, y, false)
 		end
