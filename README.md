@@ -4,16 +4,12 @@
 Worldforged Item Tracker is a lightweight addon for **WoW Ascension** that helps you and your party track the locations of **Worldforged items** and **Mystic Enchants** as you discover them.  
 It automatically creates waypoints on your world map and syncs them with your group, making it easy to build a shared record of discoveries.
 
----
-
 ## Features
 * **Automatic Tracking** – Detects when Worldforged items or Mystic Enchants are looted (from mobs, containers, or quests).  
 * **Waypoint Creation** – Marks the spot on your world map where the item was found.  
 * **Persistent Storage** – Keeps waypoints saved between sessions.  
 * **Party Sync** – Shares and syncs waypoints in real time with other party members using the addon.  
 * **Informative Tooltips** – Hover over a waypoint to see item details and its source (mob, container, or quest).  
-
----
 
 ## How It Works
 The addon listens to loot and combat logs.  
@@ -24,15 +20,11 @@ When a Worldforged item or Mystic Enchant is detected:
 
 This ensures everyone in your party has a **complete, collective record of item locations**.
 
----
-
 ## Slash Commands
 Base command: `/wfit` or `/worldforged`
 
 - `/wfit help` → Show all available commands  
 - `/wfit clear` → Clear all saved waypoints  
-
----
 
 ## Limitations
 - No manual creation of waypoints yet.  
