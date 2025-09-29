@@ -67,7 +67,7 @@ end)
 function WorldforgedItemTracker:UpdateProgressText()
 	self:EnsureMapProgressText()
 
-	if total_items_to_sync > 0 and sync_state == "WAITING" then
+	if total_items_to_sync > 0 then
 		self.mapSyncText:SetText(string.format("WFI Sync: %d / %d", items_synced_count, total_items_to_sync))
 	else
 		self.mapSyncText:SetText("")
@@ -116,10 +116,17 @@ function WorldforgedItemTracker:OnWaypointReceived(sender, itemid, continent, zo
 		LOG_LEVEL_DEBUG
 	)
 
-	if not WorldforgedDB.waypoints_db[itemid] or high_prio then
+	-- Ensure zone table exists
+	WorldforgedDB.waypoints_db[zone] = WorldforgedDB.waypoints_db[zone] or {}
+	local zoneTable = WorldforgedDB.waypoints_db[zone]
+
+	if not zoneTable[itemid] or high_prio then
 		self:CreateWaypoint(itemid, continent, zone, x, y, source)
 	end
-	seen_items[itemid] = true
+
+	-- mark seen per-zone+item
+	seen_items[zone] = seen_items[zone] or {}
+	seen_items[zone][itemid] = true
 end
 
 -- ########################
@@ -254,16 +261,21 @@ end
 -- ########################
 function WorldforgedItemTracker:SendSummary()
 	local ids = {}
-	for itemid in pairs(WorldforgedDB.waypoints_db or {}) do
-		if not seen_items[itemid] then
-			table.insert(ids, tostring(itemid))
+
+	for zoneid, items in pairs(WorldforgedDB.waypoints_db or {}) do
+		for itemid in pairs(items) do
+			if not (seen_items[zoneid] and seen_items[zoneid][itemid]) then
+				table.insert(ids, { zoneid = zoneid, itemid = itemid })
+			end
 		end
 	end
+
 	item_queue = ids
 	sync_state = "SENDING"
 
 	local count = #item_queue
 	SendAddonMessage(PREFIX, "SYNC_START:" .. count, "PARTY")
+	total_items_to_sync = count
 
 	DebugMsg("Sending " .. count .. " ITEMS to party", "00ffcc", nil, LOG_LEVEL_INFO)
 	self.frame:SetScript("OnUpdate", self.OnItemSending)
@@ -275,12 +287,16 @@ function WorldforgedItemTracker.OnItemSending(frame, elapsed)
 	if self._itemTick >= 0.1 then
 		self._itemTick = 0
 		if item_queue and #item_queue > 0 then
-			local itemid = tonumber(item_queue[1])
-			if itemid then
-				local data = WorldforgedDB.waypoints_db[itemid]
+			local entry = item_queue[1]
+			local itemid = tonumber(entry.itemid)
+			local zoneid = tonumber(entry.zoneid)
+
+			if itemid and zoneid then
+				local zoneTable = WorldforgedDB.waypoints_db[zoneid]
+				local data = zoneTable and zoneTable[itemid]
 				if data then
-					DebugMsg("Sending ITEM " .. itemid, "ff0000", nil, LOG_LEVEL_DEBUG)
-					self:SendWaypoint(itemid, data.continent, data.zone, data.x, data.y, data.source, "PARTY")
+					DebugMsg("Sending ITEM " .. itemid .. " (zone " .. zoneid .. ")", "ff0000", nil, LOG_LEVEL_DEBUG)
+					self:SendWaypoint(itemid, data.continent, zoneid, data.x, data.y, data.source, "PARTY")
 				end
 			end
 			table.remove(item_queue, 1)
@@ -288,6 +304,11 @@ function WorldforgedItemTracker.OnItemSending(frame, elapsed)
 			DebugMsg("Finished ITEM queue", "00cc00", nil, LOG_LEVEL_INFO)
 			sync_state = "IDLE"
 			frame:SetScript("OnUpdate", nil)
+		end
+		items_synced_count = total_items_to_sync - #item_queue
+		self:UpdateProgressText()
+		if items_synced_count == total_items_to_sync then
+			total_items_to_sync = 0
 		end
 	end
 end

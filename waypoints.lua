@@ -1,19 +1,17 @@
+local waypoints = {}
+
 function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, source)
-	if
-		WorldforgedDB.waypoints_db[itemid]
-		and WorldforgedDB.waypoints_db[itemid].waypoint
-		and WorldforgedDB.waypoints_db[itemid].waypoint.Hide
-	then
-		WorldforgedDB.waypoints_db[itemid].waypoint:Hide()
+	if waypoints[itemid] and waypoints[itemid].Hide then
+		waypoints[itemid]:Hide()
 	end
 
-	WorldforgedDB.waypoints_db[itemid] = {
+	WorldforgedDB.waypoints_db[zone][itemid] = {
 		continent = continent,
 		zone = zone,
 		x = x,
 		y = y,
-		waypoint = nil,
 		source = source,
+		itemid = itemid,
 	}
 	local waypoint = CreateFrame("Button", nil, ItemTrackerOverlay)
 	waypoint:SetHeight(12)
@@ -24,8 +22,9 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 	waypoint.icon:SetTexture("Interface\\AddOns\\WorldforgedItemTracker\\Images\\GoldGreenDot")
 
 	waypoint.itemid = itemid
+	waypoint.zoneid = zone
 
-	WorldforgedDB.waypoints_db[itemid].waypoint = waypoint
+	waypoints[itemid] = waypoint
 
 	waypoint:RegisterEvent("WORLD_MAP_UPDATE")
 	waypoint:SetScript("OnEvent", World_OnEvent)
@@ -88,23 +87,46 @@ function WorldforgedItemTracker:DeleteWaypoint(itemid)
 	WorldforgedDB.waypoints_db[itemid] = nil
 end
 
-function WorldforgedItemTracker:GetWaypoint(itemid)
-	return WorldforgedDB.waypoints_db[itemid]
+function WorldforgedItemTracker:GetWaypoint(zone, itemid)
+	return WorldforgedDB.waypoints_db[zone][itemid]
 end
 
 function WorldforgedItemTracker:InitializeWaypoints()
 	WorldforgedDB.waypoints_db = WorldforgedDB.waypoints_db or {}
+
+	-- Convert from old flat format if needed
+	local needsConversion = false
+	for key, value in pairs(WorldforgedDB.waypoints_db) do
+		if type(key) == "number" and type(value) == "table" and value.zone then
+			needsConversion = true
+			break
+		end
+	end
+
+	if needsConversion then
+		local new_db = {}
+		for itemid, data in pairs(WorldforgedDB.waypoints_db) do
+			local zoneid = data.zone or 0
+			new_db[zoneid] = new_db[zoneid] or {}
+			new_db[zoneid][itemid] = data
+		end
+		WorldforgedDB.waypoints_db = new_db
+	end
 
 	if not ItemTrackerOverlay then
 		local overlay = CreateFrame("Frame", "ItemTrackerOverlay", WorldMapButton)
 		overlay:SetAllPoints(true)
 	end
 
-	for itemid, data in pairs(WorldforgedDB.waypoints_db) do
-		if type(data.source) == "string" then
-			data.source = { type = "CONTAINER", name = data.source }
+	-- Updated iteration: zoneid -> itemid -> data
+	for zoneid, items in pairs(WorldforgedDB.waypoints_db) do
+		for itemid, data in pairs(items) do
+			if type(data.source) == "string" then
+				data.source = { type = "CONTAINER", name = data.source }
+			end
+
+			self:CreateWaypoint(itemid, data.continent, data.zone, data.x, data.y, data.source)
 		end
-		self:CreateWaypoint(itemid, data.continent, data.zone, data.x, data.y, data.source)
 	end
 end
 
@@ -119,7 +141,7 @@ end
 
 function World_OnEvent(self, event, ...)
 	if event == "WORLD_MAP_UPDATE" then
-		local data = WorldforgedItemTracker:GetWaypoint(self.itemid)
+		local data = WorldforgedItemTracker:GetWaypoint(self.zoneid, self.itemid)
 		local x, y = WorldforgedItemTracker:PlaceIconOnWorldMap(
 			ItemTrackerOverlay,
 			self,
