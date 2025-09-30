@@ -17,6 +17,9 @@ function WorldforgedItemTracker:OnAddonLoaded()
 	if not WorldforgedDB then
 		WorldforgedDB = {}
 	end
+	if WorldforgedDB.sharing_enabled == nil then
+		WorldforgedDB.sharing_enabled = true
+	end
 	print("WorldforgedItemTracker loaded!")
 	self:InitializeWaypoints()
 	self:InitializeTracking()
@@ -45,13 +48,20 @@ function WorldforgedItemTracker:InitializeCommands()
 			end
 
 			WorldforgedDB.waypoints_db = {}
+		elseif msg == "sharing" then
+			WorldforgedDB.sharing_enabled = not WorldforgedDB.sharing_enabled
+			if WorldforgedDB.sharing_enabled then
+				print("Waypoint sharing enabled")
+			else
+				print("Waypoint sharing disabled")
+			end
 		elseif msg == "help" or msg == "" then
 			print("|cffffd700Worldforged Item Tracker commands:|r")
 			print("/wfit help   - show this help text")
+			print("/wfit sharing - toggle waypoint sharing")
 			print("/wfit clear  - clear all waypoints")
 		else
 			print("Unknown command: " .. msg)
 		end
 	end
 end
-

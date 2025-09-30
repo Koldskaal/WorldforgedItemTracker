@@ -1,10 +1,11 @@
 local PREFIX = "WFI"
 -- LOG LEVELS:
--- 1: INFO (Default) - Important events and status changes.
+-- 1: INFO - Important events and status changes.
 -- 2: DEBUG - Detailed, potentially spammy messages for debugging.
+local LOG_LEVEL_NONE = -1
 local LOG_LEVEL_INFO = 1
 local LOG_LEVEL_DEBUG = 2
-local LOG_LEVEL = LOG_LEVEL or LOG_LEVEL_INFO
+local LOG_LEVEL = LOG_LEVEL or LOG_LEVEL_NONE
 
 local wait_start = 0
 local wait_timeout = 2
@@ -17,6 +18,13 @@ local sync_queue = {}
 -- Sync progress tracking
 local total_items_to_sync = 0
 local items_synced_count = 0
+
+-- Election
+local election_active = false
+local election_rolls = {}
+local election_timer = 0
+local election_timeout = 3
+local addon_leader = nil
 
 -- ########################
 -- Debug utility
@@ -36,6 +44,26 @@ local function DebugMsg(msg, color, chat, level)
 	end
 end
 
+-- ########################
+-- Group handling
+-- ########################
+local function IsMyselfLeader()
+	return addon_leader == UnitName("player")
+end
+
+local function GetPartyMembers()
+	local members = {}
+	for i = 1, GetNumPartyMembers() do
+		local name = UnitName("party" .. i)
+		if name then
+			table.insert(members, name)
+		end
+	end
+
+	local name = UnitName("player")
+	table.insert(members, name)
+	return members
+end
 -- ########################
 -- World Map Progress Display
 -- ########################
@@ -78,6 +106,10 @@ end
 -- Waypoint handling
 -- ########################
 function WorldforgedItemTracker:SendWaypoint(itemid, continent, zone, x, y, source, channel, target, high_prio)
+	if not WorldforgedDB.sharing_enabled then
+		return
+	end
+
 	local KEY_STRING = "ITEM"
 	if high_prio then
 		KEY_STRING = "OTEM"
@@ -139,7 +171,20 @@ function WorldforgedItemTracker:InitializeSharing()
 	local f = CreateFrame("Frame")
 	f:RegisterEvent("CHAT_MSG_ADDON")
 	f:SetScript("OnEvent", function(_, event, prefix, message, channel, sender)
-		if prefix ~= PREFIX then
+		if not WorldforgedDB.sharing_enabled or prefix ~= PREFIX then
+			return
+		end
+
+		if message:find("^LEADER:") then
+			if addon_leader then
+				return
+			end
+			addon_leader = message:match("^LEADER:(.+)")
+			self.frame:SetScript("OnUpdate", nil) -- always cancel election
+			if GetNumPartyMembers() > 0 and IsMyselfLeader() then
+				sync_queue = GetPartyMembers()
+				DebugMsg("I am leader, queuing " .. #sync_queue .. " members for sync", "ffffaa", nil, LOG_LEVEL_INFO)
+			end
 			return
 		end
 
@@ -214,6 +259,12 @@ function WorldforgedItemTracker:InitializeSharing()
 					true
 				)
 			end
+		elseif message:find("^ELECT:") then
+			local roll = tonumber(message:match("^ELECT:(%d+)"))
+			if roll then
+				election_rolls[sender] = roll
+				DebugMsg("Received roll " .. roll .. " from " .. sender, "aaaa00", nil, LOG_LEVEL_INFO)
+			end
 		end
 	end)
 
@@ -226,12 +277,16 @@ function WorldforgedItemTracker:InitializeSharing()
 	party_frame:SetScript("OnEvent", function(_, event)
 		if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
 			WorldforgedItemTracker:OnGroupChanged()
-		elseif event == "PLAYER_ENTERING_WORLD" then
-			WorldforgedItemTracker:OnGroupChanged()
+			-- elseif event == "PLAYER_ENTERING_WORLD" then
+			-- 	WorldforgedItemTracker:OnGroupChanged()
 		end
 	end)
 
 	party_frame:SetScript("OnUpdate", function(_, elapsed)
+		if not WorldforgedDB.sharing_enabled then
+			return
+		end
+
 		if sync_state ~= "IDLE" then
 			if sync_state == "WAITING" and GetTime() - wait_start > wait_timeout then
 				DebugMsg("WAITING timed out", "ff4444", nil, LOG_LEVEL_INFO)
@@ -313,33 +368,6 @@ function WorldforgedItemTracker.OnItemSending(frame, elapsed)
 	end
 end
 
--- ########################
--- Group handling
--- ########################
-local function IsMyselfLeader()
-	if GetNumRaidMembers() > 0 then
-		return IsRaidLeader()
-	elseif GetNumPartyMembers() > 0 then
-		return UnitIsPartyLeader("player")
-	else
-		return true
-	end
-end
-
-local function GetPartyMembers()
-	local members = {}
-	for i = 1, GetNumPartyMembers() do
-		local name = UnitName("party" .. i)
-		if name then
-			table.insert(members, name)
-		end
-	end
-
-	local name = UnitName("player")
-	table.insert(members, name)
-	return members
-end
-
 function WorldforgedItemTracker:CancelSync(reason)
 	sync_state = "IDLE"
 	item_queue = {}
@@ -352,23 +380,62 @@ function WorldforgedItemTracker:CancelSync(reason)
 end
 
 function WorldforgedItemTracker:OnGroupChanged()
+	if not WorldforgedDB.sharing_enabled then
+		return
+	end
+
 	if sync_state ~= "IDLE" then
 		self:CancelSync("group changed")
 		return
 	end
+
+	addon_leader = nil
+
+	-- Reset candidate rolls
+	election_active = true
+	election_rolls = {}
+	election_timer = 0
+	local myRoll = math.random(1, 10000)
+	election_rolls[UnitName("player")] = myRoll
+	SendAddonMessage(PREFIX, "ELECT:" .. myRoll, "PARTY")
+
+	DebugMsg("Starting election with roll " .. myRoll, "ffffaa", nil, LOG_LEVEL_INFO)
+
+	-- Frame timer
+	self.frame:SetScript("OnUpdate", self.OnElectionUpdate)
+
 	DebugMsg(
 		"Group members: " .. GetNumPartyMembers() .. ", Is leader: " .. tostring(IsMyselfLeader()),
 		nil,
 		nil,
 		LOG_LEVEL_DEBUG
 	)
-	if GetNumPartyMembers() > 0 and IsMyselfLeader() then
-		sync_queue = GetPartyMembers()
-		DebugMsg(
-			"Group changed, I am leader, queuing " .. #sync_queue .. " members for sync",
-			"ffffaa",
-			nil,
-			LOG_LEVEL_INFO
-		)
+end
+
+-- Election
+function WorldforgedItemTracker.OnElectionUpdate(_, elapsed)
+	if not election_active then
+		return
+	end
+
+	election_timer = election_timer + elapsed
+	if election_timer >= election_timeout then
+		election_active = false
+		WorldforgedItemTracker.frame:SetScript("OnUpdate", nil)
+
+		local winner, bestRoll = "", -1
+		for name, roll in pairs(election_rolls) do
+			if roll > bestRoll or (roll == bestRoll and name < winner) then
+				winner = name
+				bestRoll = roll
+			end
+		end
+
+		if winner then
+			DebugMsg("Election complete. Leader = " .. winner .. " (roll=" .. bestRoll .. ")", "00ffcc")
+			SendAddonMessage(PREFIX, "LEADER:" .. winner, "PARTY")
+		else
+			DebugMsg("Election failed, no rolls received.", "ff0000")
+		end
 	end
 end

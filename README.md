@@ -24,6 +24,7 @@ This ensures everyone in your party has a **complete, collective record of item 
 Base command: `/wfit` or `/worldforged`
 
 - `/wfit help` → Show all available commands  
+- `/wfit sharing` → Toggles waypoint sharing on or off  
 - `/wfit clear` → Clear all saved waypoints  
 
 ## Limitations
