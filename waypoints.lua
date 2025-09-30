@@ -24,7 +24,8 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 	waypoint.itemid = itemid
 	waypoint.zoneid = zone
 
-	waypoints[itemid] = waypoint
+	waypoints[zone] = waypoints[zone] or {}
+	waypoints[zone][itemid] = waypoint
 
 	waypoint:RegisterEvent("WORLD_MAP_UPDATE")
 	waypoint:SetScript("OnEvent", World_OnEvent)
@@ -36,7 +37,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 		GameTooltip:SetFrameStrata("TOOLTIP")
 		local link = "item:" .. self.itemid .. ":0:0:0:0:0:0:0"
 		GameTooltip:SetHyperlink(link)
-		local data = WorldforgedDB.waypoints_db[self.itemid]
+		local data = WorldforgedDB.waypoints_db[self.zoneid][self.itemid]
 		if data and data.source then
 			local sourceText
 			if data.source.type == "QUEST" then
@@ -58,33 +59,40 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 		GameTooltip:SetFrameStrata("TOOLTIP")
 	end)
 
-	waypoint:SetScript("OnClick", function(self)
-		local data = WorldforgedDB.waypoints_db[self.itemid]
-		WorldforgedItemTracker:SendWaypoint(
-			self.itemid,
-			data.continent,
-			data.zone,
-			data.x,
-			data.y,
-			data.source,
-			"PARTY"
-		)
+	waypoint:SetScript("OnClick", function(self, button)
+		if button == "RightButton" then
+			StaticPopup_Show("WFI_DELETE_WAYPOINT", nil, nil, { zoneid = self.zoneid, itemid = self.itemid })
+		else
+			-- default left click = share waypoint
+			local data = WorldforgedDB.waypoints_db[self.zoneid][self.itemid]
+			if data then
+				WorldforgedItemTracker:SendWaypoint(
+					self.itemid,
+					data.continent,
+					data.zone,
+					data.x,
+					data.y,
+					data.source,
+					"PARTY"
+				)
+			end
+		end
 	end)
 
 	WorldforgedItemTracker:PlaceIconOnWorldMap(ItemTrackerOverlay, waypoint, continent, zone, x, y)
 	waypoint:Show()
 end
 
-function WorldforgedItemTracker:DeleteWaypoint(itemid)
-	if not itemid or not WorldforgedDB.waypoints_db[itemid] then
+function WorldforgedItemTracker:DeleteWaypoint(zoneid, itemid)
+	if not itemid or not zoneid or not WorldforgedDB.waypoints_db[zoneid][itemid] then
 		return
 	end
-	local waypoint = WorldforgedDB.waypoints_db[itemid].waypoint
+	local waypoint = waypoints[zoneid][itemid]
 	waypoint:UnregisterEvent("WORLD_MAP_UPDATE")
 	waypoint:SetScript("OnEvent", nil)
 	waypoint:Hide()
 
-	WorldforgedDB.waypoints_db[itemid] = nil
+	WorldforgedDB.waypoints_db[zoneid][itemid] = nil
 end
 
 function WorldforgedItemTracker:GetWaypoint(zone, itemid)
@@ -131,7 +139,7 @@ function WorldforgedItemTracker:InitializeWaypoints()
 end
 
 function WorldforgedItemTracker:AddItem(itemid, source, continent, zone, x, y, high_prio)
-	if WorldforgedDB.waypoints_db[itemid] then
+	if WorldforgedDB.waypoints_db[zone][itemid] then
 		return
 	end
 
@@ -157,3 +165,19 @@ function World_OnEvent(self, event, ...)
 		-- end
 	end
 end
+
+StaticPopupDialogs["WFI_DELETE_WAYPOINT"] = {
+	text = "Do you really want to remove this waypoint?",
+	button1 = "Yes",
+	button2 = "No",
+	OnAccept = function(self, data)
+		-- data is our itemid passed from Show()
+		if data then
+			WorldforgedItemTracker:DeleteWaypoint(data.zoneid, data.itemid)
+		end
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3, -- avoid tainting other popups
+}

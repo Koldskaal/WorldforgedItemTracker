@@ -20,6 +20,9 @@ When a Worldforged item or Mystic Enchant is detected:
 
 This ensures everyone in your party has a **complete, collective record of item locations**.
 
+## Usage
+- **Deleting a waypoint** - Right-click a waypoint on the map to delete it.
+
 ## Slash Commands
 Base command: `/wfit` or `/worldforged`
 
@@ -29,7 +32,6 @@ Base command: `/wfit` or `/worldforged`
 
 ## Limitations
 - No manual creation of waypoints yet.  
-- No way to remove a single waypoint (only clear all).  
 - When loot bot is enabled, the recorded source is an **approximation** (usually accurate, but not guaranteed).  
 - No way to filter the waypoints on the map.
 - Same Icon is used for all waypoints.
