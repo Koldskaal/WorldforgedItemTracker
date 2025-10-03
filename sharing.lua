@@ -229,7 +229,7 @@ function WorldforgedItemTracker:InitializeSharing()
 					end
 				end
 
-				local sourceType, sourceName = source:match("([^,]+)|(.+)")
+				local sourceType, sourceName = source:match("([^|]+)|(.+)")
 				local sourceObj = { type = sourceType, name = sourceName }
 				WorldforgedItemTracker:OnWaypointReceived(
 					sender,
@@ -368,15 +368,19 @@ function WorldforgedItemTracker.OnItemSending(frame, elapsed)
 	end
 end
 
-function WorldforgedItemTracker:CancelSync(reason)
-	sync_state = "IDLE"
+local function reset()
 	item_queue = {}
 	seen_items = {}
 	sync_queue = {}
 	total_items_to_sync = 0
 	items_synced_count = 0
+end
+
+function WorldforgedItemTracker:CancelSync(reason)
+	sync_state = "IDLE"
+	reset()
 	self.frame:SetScript("OnUpdate", nil)
-	DebugMsg("Sync cancelled: " .. (reason or "group changed"), "ff4444", nil, LOG_LEVEL_INFO)
+	DebugMsg("Sync cancelled: " .. (reason or "group changed"), "ff4444", nil, LOG_LEVEL_DEBUG)
 end
 
 function WorldforgedItemTracker:OnGroupChanged()
@@ -386,8 +390,9 @@ function WorldforgedItemTracker:OnGroupChanged()
 
 	if sync_state ~= "IDLE" then
 		self:CancelSync("group changed")
-		return
 	end
+
+	reset()
 
 	addon_leader = nil
 

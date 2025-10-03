@@ -17,6 +17,11 @@ function WorldforgedItemTracker:OnAddonLoaded()
 	if not WorldforgedDB then
 		WorldforgedDB = {}
 	end
+
+	if WorldforgedDB.enchant_tracking == nil then
+		WorldforgedDB.enchant_tracking = false
+	end
+
 	if WorldforgedDB.sharing_enabled == nil then
 		WorldforgedDB.sharing_enabled = true
 	end
@@ -54,6 +59,13 @@ function WorldforgedItemTracker:InitializeCommands()
 				print("Waypoint sharing enabled")
 			else
 				print("Waypoint sharing disabled")
+			end
+		elseif msg == "enchants" then
+			WorldforgedDB.enchant_tracking = not WorldforgedDB.enchant_tracking
+			if WorldforgedDB.enchant_tracking then
+				print("enchant tracking mode enabled")
+			else
+				print("enchant tracking mode disabled")
 			end
 		elseif msg == "help" or msg == "" then
 			print("|cffffd700Worldforged Item Tracker commands:|r")

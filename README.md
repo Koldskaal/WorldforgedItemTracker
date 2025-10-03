@@ -1,11 +1,12 @@
 # Worldforged Item Tracker
 
 ## Description
-Worldforged Item Tracker is a lightweight addon for **WoW Ascension** that helps you and your party track the locations of **Worldforged items** and **Mystic Enchants** as you discover them.  
+Worldforged Item Tracker is a lightweight addon for **WoW Ascension** that helps you and your party track the locations of **Worldforged items** as you discover them.  
 It automatically creates waypoints on your world map and syncs them with your group, making it easy to build a shared record of discoveries.
 
 ## Features
-* **Automatic Tracking** – Detects when Worldforged items or Mystic Enchants are looted (from mobs, containers, or quests).  
+* **Automatic Tracking** – Detects when Worldforged items are looted.  
+* **(Experimental) Mystic Enchant Tracking** – This feature is experimental and must be enabled manually (see Slash Commands). It generally works, but since many enchants drop from mobs (and some from quests), tracking their exact source is approximate. Many enchant locations are already listed on the [Ascension Database](https://db.ascension.gg/?items=0.6&filter=cr=152:184;crs=13:1;crv=0:0;na=mystic%20scroll;ub=7;ty=6#0-1), so in many cases tracking adds limited value. Also, enchants only need to be discovered once per account, so tracking is mainly useful when sharing information with others.
 * **Waypoint Creation** – Marks the spot on your world map where the item was found.  
 * **Persistent Storage** – Keeps waypoints saved between sessions.  
 * **Party Sync** – Shares and syncs waypoints in real time with other party members using the addon.  
@@ -13,7 +14,7 @@ It automatically creates waypoints on your world map and syncs them with your gr
 
 ## How It Works
 The addon listens to loot and combat logs.  
-When a Worldforged item or Mystic Enchant is detected:  
+When a Worldforged item (or Mystic Enchant) is detected:  
 1. The location is recorded.
 2. A waypoint is placed on the world map.  
 3. If you are in a party, the waypoint is automatically synced with your group.  
@@ -28,11 +29,12 @@ Base command: `/wfit` or `/worldforged`
 
 - `/wfit help` → Show all available commands  
 - `/wfit sharing` → Toggles waypoint sharing on or off  
+- `/wfit enchants` → Toggles experimental enchant tracking on or off
 - `/wfit clear` → Clear all saved waypoints  
 
 ## Limitations
 - No manual creation of waypoints yet.  
-- When loot bot is enabled, the recorded source is an **approximation** (usually accurate, but not guaranteed).  
+- When loot bot or a party member loots a target the recorded source is an **approximation** (usually accurate, but not guaranteed).  
 - No way to filter the waypoints on the map.
 - Same Icon is used for all waypoints.
 

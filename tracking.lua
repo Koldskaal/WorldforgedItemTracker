@@ -3,6 +3,26 @@ if not WFIT_ScanTooltip then
 	WFIT_ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 end
 
+local function AddPlayerToItem(itemID, player)
+	if not WorldforgedDB.waypoints_db then
+		return
+	end
+
+	SetMapToCurrentZone()
+	local zone = GetCurrentMapID()
+	if not WorldforgedDB.waypoints_db[zone] then
+		return
+	end
+	if not WorldforgedDB.waypoints_db[zone][itemID] then
+		return
+	end
+	if not WorldforgedDB.waypoints_db[zone][itemID].players then
+		WorldforgedDB.waypoints_db[zone][itemID].players = {}
+	end
+	-- repeats might happen
+	table.insert(WorldforgedDB.waypoints_db[zone][itemID].players, player)
+end
+
 local function GetPositionFromGUID(guid)
 	if not guid then
 		return nil
@@ -18,7 +38,7 @@ local function GetPositionFromGUID(guid)
 	for i = 1, GetNumPartyMembers() do
 		local unit = "party" .. i
 		if UnitGUID(unit) == guid then
-			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPartyMemberPosition(unit)
+			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition(unit)
 		end
 	end
 
@@ -26,7 +46,7 @@ local function GetPositionFromGUID(guid)
 	for i = 1, GetNumRaidMembers() do
 		local unit = "raid" .. i
 		if UnitGUID(unit) == guid then
-			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetRaidTargetIndex(unit)
+			return GetCurrentMapContinent(), GetCurrentMapAreaID(), GetPlayerMapPosition(unit)
 		end
 	end
 
@@ -71,6 +91,19 @@ local function GetItemDescription(itemID)
 	return description -- returns a table of lines
 end
 
+function WorldforgedItemTracker:IsMysticScroll(itemID)
+	if not itemID then
+		return false
+	end
+	local description = GetItemDescription(itemID)
+	if not description or not description[1] then
+		return false
+	end
+
+	-- "Mystic Scroll of ..." always starts with "Mystic Scroll"
+	return string.sub(description[1], 1, 13) == "Mystic Scroll"
+end
+
 function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is_container, high_prio)
 	local description = GetItemDescription(itemID)
 	if not description then
@@ -82,7 +115,7 @@ function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is
 	end
 
 	local name = description[1]
-	if string.sub(name, 1, 13) == "Mystic Scroll" then
+	if string.sub(name, 1, 13) == "Mystic Scroll" and WorldforgedDB.enchant_tracking then
 		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
@@ -94,7 +127,7 @@ end
 
 function WorldforgedItemTracker:InitializeTracking()
 	local lastTooltipName, isContainerSource
-	local lastKill = {}
+	local lastKill = nil
 
 	GameTooltip:HookScript("OnTooltipSetUnit", function(self)
 		local name, unit = self:GetUnit()
@@ -174,7 +207,7 @@ function WorldforgedItemTracker:InitializeTracking()
 				end
 				local c, z, x, y = GetPositionFromGUID(killerGUID)
 
-				WorldforgedItemTracker.lastKill = {
+				lastKill = {
 					killerGUID = killerGUID,
 					killerName = killerName,
 					mobGUID = destGUID,
@@ -206,6 +239,18 @@ function WorldforgedItemTracker:InitializeTracking()
 	local fChat = CreateFrame("Frame")
 	fChat:RegisterEvent("CHAT_MSG_LOOT")
 	fChat:SetScript("OnEvent", function(_, _, msg, playerName)
+		-- log player looting item
+		local item = msg:match("You receive loot: (.+)%.")
+		if item then
+			local itemLink = msg:match("|Hitem:.-|h.-|h")
+			if itemLink then
+				local itemID = tonumber(itemLink:match("item:(%d+)"))
+				if itemID then
+					AddPlayerToItem(itemID, UnitName("player"))
+				end
+			end
+		end
+
 		local isQuestReward = activeNPC == UnitName("target")
 
 		if not lastKill and not isQuestReward then

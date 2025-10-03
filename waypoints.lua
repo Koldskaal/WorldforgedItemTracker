@@ -1,10 +1,11 @@
 local waypoints = {}
 
 function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, source)
-	if waypoints[itemid] and waypoints[itemid].Hide then
-		waypoints[itemid]:Hide()
+	if waypoints[zone] and waypoints[zone][itemid] then
+		waypoints[zone][itemid]:Hide()
 	end
 
+	WorldforgedDB.waypoints_db[zone] = WorldforgedDB.waypoints_db[zone] or {}
 	WorldforgedDB.waypoints_db[zone][itemid] = {
 		continent = continent,
 		zone = zone,
@@ -84,13 +85,23 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 end
 
 function WorldforgedItemTracker:DeleteWaypoint(zoneid, itemid)
-	if not itemid or not zoneid or not WorldforgedDB.waypoints_db[zoneid][itemid] then
+	if not itemid or not zoneid then
 		return
 	end
-	local waypoint = waypoints[zoneid][itemid]
-	waypoint:UnregisterEvent("WORLD_MAP_UPDATE")
-	waypoint:SetScript("OnEvent", nil)
-	waypoint:Hide()
+	if not WorldforgedDB.waypoints_db[zoneid] then
+		return
+	end
+	if not WorldforgedDB.waypoints_db[zoneid][itemid] then
+		return
+	end
+
+	local waypoint = waypoints[zoneid] and waypoints[zoneid][itemid]
+	if waypoint then
+		waypoint:UnregisterEvent("WORLD_MAP_UPDATE")
+		waypoint:SetScript("OnEvent", nil)
+		waypoint:Hide()
+		waypoints[zoneid][itemid] = nil
+	end
 
 	WorldforgedDB.waypoints_db[zoneid][itemid] = nil
 end
@@ -149,6 +160,11 @@ end
 
 function World_OnEvent(self, event, ...)
 	if event == "WORLD_MAP_UPDATE" then
+		if WorldforgedItemTracker:IsMysticScroll(self.itemid) and not WorldforgedDB.enchant_tracking then
+			self:Hide()
+			return
+		end
+
 		local data = WorldforgedItemTracker:GetWaypoint(self.zoneid, self.itemid)
 		local x, y = WorldforgedItemTracker:PlaceIconOnWorldMap(
 			ItemTrackerOverlay,
@@ -158,11 +174,6 @@ function World_OnEvent(self, event, ...)
 			data.x,
 			data.y
 		)
-		-- if x and y and (0 < x and x <= 1) and (0 < y and y <= 1) then
-		-- 	self:Show()
-		-- else
-		-- 	self:Hide()
-		-- end
 	end
 end
 
