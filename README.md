@@ -30,7 +30,8 @@ Base command: `/wfit` or `/worldforged`
 - `/wfit help` → Show all available commands  
 - `/wfit sharing` → Toggles waypoint sharing on or off  
 - `/wfit enchants` → Toggles experimental enchant tracking on or off
-- `/wfit clear` → Clear all saved waypoints  
+- `/wfit clear` → Clear all saved waypoints
+- `/wfit reset` → Resets the database of items you have picked up. Useful for prestige.  
 
 ## Limitations
 - No manual creation of waypoints yet.  

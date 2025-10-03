@@ -4,10 +4,6 @@ if not WFIT_ScanTooltip then
 end
 
 local function AddPlayerToItem(itemID, player)
-	if not WorldforgedDB.waypoints_db then
-		return
-	end
-
 	SetMapToCurrentZone()
 	local zone = GetCurrentMapAreaID()
 	if not WorldforgedDB.waypoints_db[zone] then
@@ -16,11 +12,10 @@ local function AddPlayerToItem(itemID, player)
 	if not WorldforgedDB.waypoints_db[zone][itemID] then
 		return
 	end
-	if not WorldforgedDB.waypoints_db[zone][itemID].players then
-		WorldforgedDB.waypoints_db[zone][itemID].players = {}
-	end
-	-- repeats might happen
-	table.insert(WorldforgedDB.waypoints_db[zone][itemID].players, player)
+
+	WorldforgedDBPerChar = WorldforgedDBPerChar or {}
+	WorldforgedDBPerChar[zone] = WorldforgedDBPerChar[zone] or {}
+	WorldforgedDBPerChar[zone][itemID] = true
 end
 
 local function GetPositionFromGUID(guid)

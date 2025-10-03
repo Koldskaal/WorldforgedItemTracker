@@ -5,6 +5,7 @@
 ## Version: 0.1
 ## DefaultState: enabled
 ## SavedVariables: WorldforgedDB
+## SavedVariablesPerCharacter: WorldforgedDBPerChar
 
 core.lua
 world_map_bounds.lua

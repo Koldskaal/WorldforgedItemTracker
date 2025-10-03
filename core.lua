@@ -17,6 +17,9 @@ function WorldforgedItemTracker:OnAddonLoaded()
 	if not WorldforgedDB then
 		WorldforgedDB = {}
 	end
+	if not WorldforgedDBPerChar then
+		WorldforgedDBPerChar = {}
+	end
 
 	if WorldforgedDB.enchant_tracking == nil then
 		WorldforgedDB.enchant_tracking = false
@@ -67,11 +70,15 @@ function WorldforgedItemTracker:InitializeCommands()
 			else
 				print("enchant tracking mode disabled")
 			end
+		elseif msg == "reset" then
+			WorldforgedDBPerChar = {}
 		elseif msg == "help" or msg == "" then
 			print("|cffffd700Worldforged Item Tracker commands:|r")
 			print("/wfit help   - show this help text")
 			print("/wfit sharing - toggle waypoint sharing")
+			print("/wfit enchants - toggle enchant tracking")
 			print("/wfit clear  - clear all waypoints")
+			print("/wfit reset - reset picked up items. Useful for prestige")
 		else
 			print("Unknown command: " .. msg)
 		end

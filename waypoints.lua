@@ -174,6 +174,15 @@ function World_OnEvent(self, event, ...)
 			data.x,
 			data.y
 		)
+
+		if not WorldforgedDBPerChar[self.zoneid] then
+			return
+		end
+		if WorldforgedDBPerChar[self.zoneid][self.itemid] then
+			self.icon:SetDesaturated(true)
+		else
+			self.icon:SetDesaturated(false)
+		end
 	end
 end
 
