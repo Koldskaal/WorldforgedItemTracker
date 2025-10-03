@@ -17,8 +17,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 	local waypoint = CreateFrame("Button", nil, ItemTrackerOverlay)
 	waypoint:SetHeight(12)
 	waypoint:SetWidth(12)
-	waypoint:RegisterForClicks("RightButtonUp")
-	waypoint:RegisterForClicks("LeftButtonUp")
+	waypoint:RegisterForClicks("RightButtonUp", "LeftButtonUp")
 	waypoint.icon = waypoint:CreateTexture("ARTWORK")
 	waypoint.icon:SetAllPoints()
 	waypoint.icon:SetTexture("Interface\\AddOns\\WorldforgedItemTracker\\Images\\GoldGreenDot")
@@ -65,6 +64,7 @@ function WorldforgedItemTracker:CreateWaypoint(itemid, continent, zone, x, y, so
 		if button == "RightButton" then
 			StaticPopup_Show("WFI_DELETE_WAYPOINT", nil, nil, { zoneid = self.zoneid, itemid = self.itemid })
 		else
+			WorldforgedDBPerChar[self.zoneid] = WorldforgedDBPerChar[self.zoneid] or {}
 			-- Assume left click = track/untrack pickup
 			WorldforgedDBPerChar[self.zoneid][self.itemid] = not WorldforgedDBPerChar[self.zoneid][self.itemid]
 			self.icon:SetDesaturated(WorldforgedDBPerChar[self.zoneid][self.itemid])
