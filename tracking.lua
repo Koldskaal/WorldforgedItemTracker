@@ -9,7 +9,7 @@ local function AddPlayerToItem(itemID, player)
 	end
 
 	SetMapToCurrentZone()
-	local zone = GetCurrentMapID()
+	local zone = GetCurrentMapAreaID()
 	if not WorldforgedDB.waypoints_db[zone] then
 		return
 	end
