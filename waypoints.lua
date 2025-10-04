@@ -141,6 +141,7 @@ function WorldforgedItemTracker:InitializeWaypoints()
 end
 
 function WorldforgedItemTracker:AddItem(itemid, source, continent, zone, x, y, high_prio)
+	WorldforgedDB.waypoints_db[zone] = WorldforgedDB.waypoints_db[zone] or {}
 	if WorldforgedDB.waypoints_db[zone][itemid] then
 		return
 	end
