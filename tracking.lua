@@ -110,7 +110,7 @@ function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is
 	end
 
 	local name = description[1]
-	if string.sub(name, 1, 13) == "Mystic Scroll" and WorldforgedDB.enchant_tracking then
+	if string.sub(name, 1, 13) == "Mystic Scroll" then
 		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
