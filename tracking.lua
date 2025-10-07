@@ -48,21 +48,6 @@ local function GetPositionFromGUID(guid)
 	return nil -- not found in group
 end
 
-local function IsItemBoP(description)
-	if not description then
-		return false
-	end
-
-	-- Scan each line of the tooltip
-	for i = 1, #description do
-		local text = description[i]
-		if text == ITEM_BIND_ON_PICKUP then
-			return true
-		end
-	end
-	return false
-end
-
 local function GetItemDescription(itemID)
 	if not itemID then
 		return nil
@@ -90,17 +75,22 @@ function WorldforgedItemTracker:IsMysticScroll(itemID)
 	if not itemID then
 		return false
 	end
-	local description = GetItemDescription(itemID)
-	if not description or not description[1] then
+	local name, _ = GetItemInfo(itemID)
+	if not name then
 		return false
 	end
 
 	-- "Mystic Scroll of ..." always starts with "Mystic Scroll"
-	return string.sub(description[1], 1, 13) == "Mystic Scroll"
+	return string.sub(name, 1, 13) == "Mystic Scroll"
 end
 
 function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is_container, high_prio)
+	local itemName, _, itemRarity, _ = GetItemInfo(itemID)
+	if itemRarity < ITEM_QUALITY_UNCOMMON then
+		return
+	end
 	local description = GetItemDescription(itemID)
+
 	if not description then
 		return
 	end
@@ -109,15 +99,14 @@ function WorldforgedItemTracker:OnLoot(itemID, source, continent, zone, x, y, is
 		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
-	local name = description[1]
-	if string.sub(name, 1, 13) == "Mystic Scroll" then
+	if self:IsMysticScroll(itemID) then
 		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
 	end
 
-	-- backup since some items arent WORLDFORGED for some reason
-	if is_container and IsItemBoP(description) and GetNumLootItems() == 1 then
-		WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
-	end
+	-- -- backup since some items arent WORLDFORGED for some reason
+	-- if is_container and bindType == 1 and GetNumLootItems() == 1 then
+	-- 	WorldforgedItemTracker:AddItem(itemID, source, continent, zone, x, y, high_prio)
+	-- end
 end
 
 function WorldforgedItemTracker:InitializeTracking()
@@ -172,6 +161,10 @@ function WorldforgedItemTracker:InitializeTracking()
 	fRoll:RegisterEvent("START_LOOT_ROLL")
 	fRoll:SetScript("OnEvent", function(_, event, rollID, rollTime)
 		if not lastKill then
+			return
+		end
+		_, _, _, _, bindOnPickUp, _ = GetLootRollItemInfo(rollID)
+		if not bindOnPickUp then
 			return
 		end
 
@@ -234,6 +227,9 @@ function WorldforgedItemTracker:InitializeTracking()
 	local fChat = CreateFrame("Frame")
 	fChat:RegisterEvent("CHAT_MSG_LOOT")
 	fChat:SetScript("OnEvent", function(_, _, msg, playerName)
+		if not msg:match("^(.+) receives loot:") then
+			return
+		end
 		-- log player looting item
 		local item = msg:match("You receive loot: (.+)%.")
 		if item then
