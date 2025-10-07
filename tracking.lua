@@ -163,11 +163,11 @@ function WorldforgedItemTracker:InitializeTracking()
 		if not lastKill then
 			return
 		end
-		_, _, _, _, bindOnPickUp, _ = GetLootRollItemInfo(rollID)
-		if not bindOnPickUp then
-			return
-		end
-
+		-- _, _, _, _, bindOnPickUp, _ = GetLootRollItemInfo(rollID)
+		-- if not bindOnPickUp then
+		-- 	return
+		-- end
+		--
 		local link = GetLootRollItemLink(rollID)
 		if link then
 			local itemID = tonumber(link:match("item:(%d+)"))
@@ -227,9 +227,6 @@ function WorldforgedItemTracker:InitializeTracking()
 	local fChat = CreateFrame("Frame")
 	fChat:RegisterEvent("CHAT_MSG_LOOT")
 	fChat:SetScript("OnEvent", function(_, _, msg, playerName)
-		if not msg:match("^(.+) receives loot:") then
-			return
-		end
 		-- log player looting item
 		local item = msg:match("You receive loot: (.+)%.")
 		if item then
@@ -241,7 +238,9 @@ function WorldforgedItemTracker:InitializeTracking()
 				end
 			end
 		end
-
+		if not msg:match("^(.+) receives loot:") then
+			return
+		end
 		local isQuestReward = activeNPC == UnitName("target")
 
 		if not lastKill and not isQuestReward then
